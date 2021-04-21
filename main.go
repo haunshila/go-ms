@@ -16,10 +16,12 @@ func main() {
 
 	hl := handlers.NewHello(l)
 	gb := handlers.NewGoodBye(l)
+	pd := handlers.NewProducts(l)
 
 	sm := http.NewServeMux()
 	sm.Handle("/", hl)
 	sm.Handle("/bye", gb)
+	sm.Handle("/products", pd)
 
 	s := &http.Server{
 		Addr:         ":9090",
@@ -46,6 +48,7 @@ func main() {
 
 	// Graceful shutdown
 	tc, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
+
 	s.Shutdown(tc)
 
 }
