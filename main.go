@@ -1,30 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+
+	"github.com/haunshila/go-ms/handlers"
 )
 
 func main() {
+	l := log.New(os.Stdout, "product-api", log.LstdFlags)
 
-	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		log.Println("Hello WOrld")
-		d, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write([]byte("Ooops, try again"))
-			return
-		}
+	hl := handlers.NewHello(l)
+	gb := handlers.NewGoodBye(l)
 
-		fmt.Fprintf(rw, "Hellow %s", d)
-	})
+	sm := http.NewServeMux()
+	sm.Handle("/", hl)
+	sm.Handle("/bye", gb)
 
-	http.HandleFunc("/bye", func(http.ResponseWriter, *http.Request) {
-		log.Println("Goodbye World")
-	})
-
-	http.ListenAndServe(":9090", nil)
+	http.ListenAndServe(":9090", sm)
 
 }
