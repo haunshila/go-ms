@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"time"
 
 	"github.com/haunshila/go-ms/handlers"
@@ -27,6 +29,23 @@ func main() {
 		WriteTimeout: 1 * time.Second,
 	}
 
-	s.ListenAndServe()
+	go func() {
+		err := s.ListenAndServe()
+		if err != nil {
+			l.Fatal(err)
+		}
+	}()
+
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, os.Interrupt)
+	signal.Notify(sigChan, os.Kill)
+
+	sig := <-sigChan
+
+	l.Println("Received terminate, graceful shutdown", sig)
+
+	// Graceful shutdown
+	tc, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
+	s.Shutdown(tc)
 
 }
