@@ -11,20 +11,18 @@ import (
 	"github.com/haunshila/go-ms/handlers"
 )
 
+var bindAddress = ":9090"
+
 func main() {
 	l := log.New(os.Stdout, "product-api", log.LstdFlags)
 
-	hl := handlers.NewHello(l)
-	gb := handlers.NewGoodBye(l)
 	pd := handlers.NewProducts(l)
 
 	sm := http.NewServeMux()
-	sm.Handle("/", hl)
-	sm.Handle("/bye", gb)
-	sm.Handle("/products", pd)
+	sm.Handle("/", pd)
 
 	s := &http.Server{
-		Addr:         ":9090",
+		Addr:         bindAddress,
 		Handler:      sm,
 		IdleTimeout:  60 * time.Second,
 		ReadTimeout:  1 * time.Second,
@@ -32,6 +30,7 @@ func main() {
 	}
 
 	go func() {
+		l.Println("Starting server on port 9090")
 		err := s.ListenAndServe()
 		if err != nil {
 			l.Fatal(err)
