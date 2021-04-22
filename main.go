@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/haunshila/go-ms/handlers"
 )
 
@@ -18,8 +19,21 @@ func main() {
 
 	pd := handlers.NewProducts(l)
 
-	sm := http.NewServeMux()
-	sm.Handle("/", pd)
+	// create a server mux and assign handlers
+	sm := mux.NewRouter()
+
+	getRouter := sm.Methods("GET").Subrouter()
+
+	getRouter.HandleFunc("/", pd.GetProducts)
+	// sm.Handle("/products", pd)
+
+	putRouter := sm.Methods("PUT").Subrouter()
+	putRouter.HandleFunc("/{id:[0-9]+}", pd.UpdateProducts)
+	putRouter.Use(pd.MiddlewareValidateProduct)
+
+	postRouter := sm.Methods("POST").Subrouter()
+	postRouter.HandleFunc("/", pd.AddProducts)
+	postRouter.Use(pd.MiddlewareValidateProduct)
 
 	s := &http.Server{
 		Addr:         bindAddress,
