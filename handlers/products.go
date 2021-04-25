@@ -19,6 +19,12 @@ func NewProducts(l *log.Logger) *Products {
 	return &Products{l}
 }
 
+// swagger:route GET /products products listProducts
+// Return a list of products
+// responses:
+//	200: productsResponse
+
+// GetProducts returns the products from the data store
 func (p *Products) GetProducts(rw http.ResponseWriter, r *http.Request) {
 	p.l.Println("In getProducts")
 
