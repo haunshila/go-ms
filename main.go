@@ -1,30 +1,67 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/haunshila/go-ms/handlers"
 )
 
+var bindAddress = ":9090"
+
 func main() {
+	l := log.New(os.Stdout, "product-api", log.LstdFlags)
 
-	http.HandleFunc("/", func(rw http.ResponseWriter, r *http.Request) {
-		log.Println("Hello WOrld")
-		d, err := ioutil.ReadAll(r.Body)
+	pd := handlers.NewProducts(l)
+
+	// create a server mux and assign handlers
+	sm := mux.NewRouter()
+
+	getRouter := sm.Methods("GET").Subrouter()
+
+	getRouter.HandleFunc("/", pd.GetProducts)
+	// sm.Handle("/products", pd)
+
+	putRouter := sm.Methods("PUT").Subrouter()
+	putRouter.HandleFunc("/{id:[0-9]+}", pd.UpdateProducts)
+	putRouter.Use(pd.MiddlewareValidateProduct)
+
+	postRouter := sm.Methods("POST").Subrouter()
+	postRouter.HandleFunc("/", pd.AddProducts)
+	postRouter.Use(pd.MiddlewareValidateProduct)
+
+	s := &http.Server{
+		Addr:         bindAddress,
+		Handler:      sm,
+		IdleTimeout:  60 * time.Second,
+		ReadTimeout:  1 * time.Second,
+		WriteTimeout: 1 * time.Second,
+	}
+
+	go func() {
+		l.Println("Starting server on port 9090")
+		err := s.ListenAndServe()
 		if err != nil {
-			rw.WriteHeader(http.StatusBadRequest)
-			rw.Write([]byte("Ooops, try again"))
-			return
+			l.Fatal(err)
 		}
+	}()
 
-		fmt.Fprintf(rw, "Hellow %s", d)
-	})
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, os.Interrupt)
+	signal.Notify(sigChan, os.Kill)
 
-	http.HandleFunc("/bye", func(http.ResponseWriter, *http.Request) {
-		log.Println("Goodbye World")
-	})
+	sig := <-sigChan
 
-	http.ListenAndServe(":9090", nil)
+	l.Println("Received terminate, graceful shutdown", sig)
+
+	// Graceful shutdown
+	tc, _ := context.WithDeadline(context.Background(), time.Now().Add(30*time.Second))
+
+	s.Shutdown(tc)
 
 }
